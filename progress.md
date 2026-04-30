@@ -110,3 +110,51 @@ Four standalone scripts that together cover the full text → numbers → meanin
 - **MPS acceleration** — PyTorch `.to("mps")` runs on M1 GPU with no code changes beyond device detection
 - **Sinusoidal PE** — unique fingerprint per position; low dims oscillate fast (fine-grained), high dims slow (coarse)
 
+---
+
+## Day 04 — Transformer Block
+
+**Project:** GPT-style Transformer Block (from scratch)
+**Folder:** `day04/`
+
+### Key Files
+- `day04/attention.py` — SingleHeadAttention + MultiHeadAttention (8 heads), causal masking
+- `day04/transformer_block.py` — FeedForward (GELU), LayerNorm, residuals, TransformerBlock, stacking demo
+- `day04/test_day04.py` — 7-step integration test using Day 3 embeddings + PE
+
+### What Was Built
+Three files that build a complete GPT-style transformer block from the ground up:
+
+1. **SingleHeadAttention** — One Q/K/V projection each. Explicit causal mask via `torch.triu(..., diagonal=1)` filled with `-inf` before softmax. Printed the full 6×6 attention weight matrix to verify upper-triangle is exactly 0.
+
+2. **MultiHeadAttention** — 8 heads, each operating on 4-dim subspace (32/8=4). Single big W_q/W_k/W_v projections reshaped into `(B, H, T, d_head)` for efficiency. Output projection W_o recombines heads. All 8 heads verified: row-sums == 1, future mass == 0.
+
+3. **FeedForward** — Linear(32→128) + GELU + Linear(128→32). Printed GELU vs ReLU side-by-side: GELU gently suppresses negatives (not hard-zero). 4× expansion = 8,352 parameters.
+
+4. **LayerNorm** — Verified normalization: input mean=2.19/std=4.26 → output mean=0.00/std=1.02. Explained why pre-norm prevents attention score explosion.
+
+5. **TransformerBlock** — Pre-norm variant: `x = x + MHA(LN(x))`, then `x = x + FFN(LN(x))`. 12,576 total params per block. Gradient norm = 24.4, confirms backprop works.
+
+6. **Stacked blocks** — 4 blocks, 50,304 total params. Tracked mean |Δx| per layer (~0.22–0.28) showing each block incrementally refines representations.
+
+7. **Integration test** — Loaded `day03/embeddings.npy` (79×32) + `vocab.txt`, selected "the model learns from data", added sinusoidal PE, ran through TransformerBlock. Cosine sims 0.87–0.93 confirmed vectors were enriched. Gradient flows to all 5 token positions.
+
+8. **Mini-GPT** — 4 TransformerBlocks + final LayerNorm + Linear(32, 80) = 52,928 params. Produces logits shape (1, 5, 80). Verified argmax gives a predicted next token.
+
+### What Worked
+- Causal mask via `torch.triu` + `masked_fill(-inf)` — clean, verified mathematically
+- Multi-head reshape trick `view(B, T, H, d_head).transpose(1,2)` — no separate head loops needed
+- Day 3 embeddings loaded directly into the pipeline — real word vectors through real attention
+- Gradient flow confirmed via `.requires_grad_(True)` + `loss.backward()` on all inputs
+
+### Nothing Broke
+
+### Key Concepts Demonstrated
+- **Scaled dot-product attention** — `QKᵀ / √d_k` prevents softmax saturation at high dims
+- **Causal masking** — GPT can only look backward; BERT can look both ways; mask enforces this
+- **Multi-head attention** — 8 parallel subspaces each learn a different relationship pattern
+- **Pre-norm vs post-norm** — pre-norm (GPT-2+) trains more stably; gradients flow clean through residual
+- **Residual connections** — `x + sub_layer(x)` means gradients skip layers; no vanishing at 96 layers
+- **Feed-forward as token memory** — attention mixes positions; FFN processes each position independently
+- **GELU** — smooth non-linearity; outperforms ReLU in transformer-scale models
+- **Stackable design** — input shape == output shape, so N blocks chain without adapters
