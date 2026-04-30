@@ -130,16 +130,29 @@ than terse code.
 - **Learn:** Context windows (what 200K tokens means), why LLMs hallucinate, temperature/top-p/top-k, input vs output token costs
 - **Build:** LLM Cost Calculator Web App — helps companies estimate API costs by model
 - **Code folder:** ~/llm01/day02/
-- **Status:** [ ]
-- **Log:**
+- **Status:** [X]
+- **Log:**Completed Day 2. Claude.ai track: covered context windows (working 
+memory, cost-per-call implications, lost-in-the-middle degradation), 
+hallucination as structural feature — two causes: training defects vs 
+missing information, and field diagnostic test to distinguish them. 
+Sampling parameters (temperature 0.1-0.3 for production, max_tokens 
+based on use case not budget). Input vs output token cost asymmetry — 
+output costs more due to sequential generation locking GPU for entire 
+duration. Model selection framework: diagnose before prescribing, test 
+on real data, match model tier to task risk. Build track: LLM Cost 
+Calculator Flask web app in day02/ on port 5002 — monthly/annual cost 
+estimates, all-model comparison table, input/output cost breakdown, 
+prompt caching savings calculator. Q&A: 6 client scenario questions 
+completed. Strongest: GPU lock reasoning. To sharpen: diagnose 
+hallucination type before recommending a fix.
 
 ### Day 3: Build a Tokenizer & Embeddings from Scratch
 - **Goal:** Understand how raw text becomes numbers an LLM can process
 - **Learn:** Byte Pair Encoding algorithm step by step, how vocabulary is built, token → integer → embedding vector pipeline, positional encodings (how the model knows word order)
 - **Build:** BPE Tokenizer + Embedding Trainer — build a working BPE tokenizer from scratch (no libraries), train simple word embeddings on a text corpus, visualize the embedding space
 - **Code folder:** ~/llm01/day03/
-- **Status:** [ ]
-- **Log:**
+- **Status:** [X]
+- **Log:** Day 3 Log: Completed Day 3. Claude.ai track: covered BPE algorithm step by step — starts from individual characters, merges most frequent pairs until target vocab size, no prior knowledge of words. Observed merge history: "the" fully merged by step 6, "token" by step 16, "model" by step 53 — frequency in corpus determines merge order. Token→Integer→Embedding pipeline: embedding matrix is a lookup table of learned vectors, dimensions are a hyperparameter not determined by neighbors, meaning emerges from co-occurrence statistics at scale. Positional encoding: every token gets a unique position fingerprint added to its embedding vector so the transformer can distinguish sequence order — implemented as sine/cosine waves, chosen over random numbers because they're smooth, infinite, and encode relative distance mathematically. Key clarification: dimension position in embedding has no meaning, only vector distances matter. Build track: BPE tokenizer from scratch (no libraries), skip-gram embedding trainer on MPS (M1 GPU), PCA visualizer showing transformers/attention/tokens clustering together, sinusoidal PE heatmap showing unique fingerprint per position. Key observation: nearest neighbors on small corpus reflect co-occurrence not semantic understanding — scale is what produces genuine meaning geometry.
 
 ### Day 4: Build a Transformer — Attention Is All You Need
 - **Goal:** Understand the transformer architecture by building every piece

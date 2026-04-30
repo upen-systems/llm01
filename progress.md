@@ -35,3 +35,78 @@ A terminal tool that tokenizes any text using tiktoken's `cl100k_base` encoding 
 - **Cost math** — `(n_tokens / 1_000_000) * price_per_million`
 - **Chars/token ratio** — typical English prose ≈ 4 chars/token; code and special chars lower this
 
+---
+
+## Day 02 — LLM Cost Calculator Web App
+
+**Project:** LLM Cost Calculator Web App
+**Folder:** `day02/app.py`
+
+### Key Files
+- `day02/app.py` — single-file Flask app (~280 lines, inline CSS template)
+
+### What Was Built
+A single-page Flask web app that estimates LLM API costs for a given use case. Runs on port 5002.
+
+**Features:**
+- Input form: use case description, monthly requests, avg input/output tokens, model selector
+- 6 models with accurate $/1M pricing: Claude Sonnet 4, Claude Haiku 4.5, GPT-4o, GPT-4o mini, Gemini 1.5 Pro, Gemini 1.5 Flash
+- Results: monthly cost, annual cost, cost per request, input vs output breakdown bar chart
+- All-model comparison table sorted by monthly cost with provider badges
+- Context window warning when avg input tokens > 50,000
+- Prompt caching section: checkbox enables cached token field; shows monthly savings + % reduction (Anthropic models only, 90% discount on cached tokens)
+
+### What Worked
+- Flask installed cleanly via pip3; app served 200 on first run
+- POST calculation verified correct: cost math, caching discount, comparison sort all pass
+- Dark UI rendered cleanly with inline ANSI-free CSS — no external deps
+
+### Nothing Broke
+
+### Key Concepts Demonstrated
+- **Token pricing math** — `(tokens / 1_000_000) * price_per_million` applied to input and output separately
+- **Prompt caching economics** — 90% discount on repeated system prompt tokens dramatically reduces Anthropic costs at scale
+- **Input vs output asymmetry** — output tokens are 3–5× more expensive than input across all providers
+- **Provider cost spread** — Gemini Flash is ~40× cheaper than Claude Sonnet for the same workload
+- **Flask GET/POST pattern** — single route handles both form render and result display
+
+---
+
+## Day 03 — BPE Tokenizer + Embedding Trainer
+
+**Project:** BPE Tokenizer + Embedding Trainer (from scratch)
+**Folder:** `day03/`
+
+### Key Files
+- `day03/bpe_tokenizer.py` — BPE algorithm from scratch, encode/decode, merge history
+- `day03/embeddings.py` — skip-gram word2vec in PyTorch, MPS backend, saves embeddings.npy
+- `day03/visualize.py` — PCA projection to 2D, matplotlib scatter plot, nearest neighbors
+- `day03/positional_encoding.py` — sinusoidal PE, heatmap + waveform plot
+
+### What Was Built
+Four standalone scripts that together cover the full text → numbers → meaning pipeline:
+
+1. **BPE Tokenizer** — trains on a 20-sentence corpus, learns 54 merge rules to hit vocab size 80, prints each merge step with frequencies. `encode()` returns integer token IDs; `decode()` reconstructs original text. Showed BPE merging "token" from t+o+k+e+n in 5 steps.
+
+2. **Embedding Trainer** — skip-gram PyTorch model with negative sampling loss, trained 50 epochs on MPS (M1 GPU). Saves 79×32 embedding matrix to `embeddings.npy`. Nearest neighbors show semantically related words clustering (attention → tokens, scores, vectors, layers).
+
+3. **Visualizer** — loads embeddings, runs PCA to 2D, plots labelled scatter with dark theme. Prints top-5 cosine-similarity neighbors for model, token, training, attention, embedding.
+
+4. **Positional Encoding** — implements PE(pos, 2i) = sin / cos formula from "Attention Is All You Need". Generates 50×64 matrix, saves heatmap showing low-dim fast oscillation vs high-dim slow oscillation.
+
+### What Worked
+- BPE correctly merges high-frequency pairs first (s+</w> → "s</w>" at step 1 with freq=25)
+- MPS backend activated automatically on M1 — training ran on GPU
+- encode/decode round-trip verified on all test sentences
+- PE position 0 correctly produces all-cosine encoding (sin(0)=0)
+
+### Nothing Broke
+
+### Key Concepts Demonstrated
+- **BPE algorithm** — starts with characters, merges most-frequent pairs iteratively; "token" emerges naturally from the corpus
+- **Subword tokenization** — rare words decompose into known subpieces; `embeddings` → `e m b e d d ing s</w>`
+- **Skip-gram objective** — predict context words from center word; similar-context words get similar vectors
+- **Negative sampling** — train binary classifiers (real pair vs noise) instead of softmax over full vocab
+- **MPS acceleration** — PyTorch `.to("mps")` runs on M1 GPU with no code changes beyond device detection
+- **Sinusoidal PE** — unique fingerprint per position; low dims oscillate fast (fine-grained), high dims slow (coarse)
+
